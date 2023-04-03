@@ -1,5 +1,6 @@
 package huhtala.bryce.jpgpt.controller;
 
+import com.google.gson.Gson;
 import huhtala.bryce.jpgpt.dao.LanguageDataDao;
 import huhtala.bryce.jpgpt.model.*;
 import huhtala.bryce.jpgpt.service.ChatGptService;
@@ -29,18 +30,26 @@ public class LanguageDataController {
 
     @CrossOrigin(origins = "*")
     @PostMapping("/kanji/{id}")
-    public QuizEvaluation judgeItemAnswerById(@PathVariable("id") int id, @RequestParam String answer) {
+    public QuizEvaluation judgeItemAnswerById(@PathVariable("id") int id, @RequestParam String answer, @RequestParam(required = false) boolean appeal) {
 
         Kanji kanji = languageDataDao.getKanjiById(id);
 
-        String[] correctAnswers = kanji.getMeanings().split("\\|");
+        if (!appeal) {
+            String[] correctAnswers = kanji.getMeanings().split("\\|");
 
-        for (String correctAnswer : correctAnswers) {
-            if (answer.equalsIgnoreCase(correctAnswer))
+            for (String correctAnswer : correctAnswers) {
+                if (answer.equalsIgnoreCase(correctAnswer))
+                    return new QuizEvaluation("Correct");
+            }
+
+            return new QuizEvaluation("Incorrect");
+        } else {
+            if (runKanjiAppeal(kanji.getKanji(), answer))
                 return new QuizEvaluation("Correct");
+            else
+                return new QuizEvaluation("Incorrect");
         }
 
-        return new QuizEvaluation("Incorrect");
 
 //        if (evaluation.isInputWrittenWithEnglish()) {
 //            if (evaluation.isInputCorrectAnswer())
@@ -53,12 +62,39 @@ public class LanguageDataController {
     }
 
     @CrossOrigin(origins = "*")
+    @GetMapping("/kanji/{id}/meaning")
+    public String[] judgeItemAnswerById(@PathVariable("id") int id) {
+
+        Kanji kanji = languageDataDao.getKanjiById(id);
+
+        String[] correctAnswers = kanji.getMeanings().split("\\|");
+
+        return correctAnswers;
+
+    }
+
+
+    @CrossOrigin(origins = "*")
     @GetMapping("/sets/{id}/random")
     public KanjiQuiz getRandomItemFromSet(@PathVariable("id") int id) {
         return new KanjiQuiz(languageDataDao.getRandomKanji());
     }
-}
 
+
+    private boolean runKanjiAppeal(String kanji, String answer) {
+        BotRequest botRequest = new BotRequest();
+        botRequest.setMessage("{ kanji: \"" + kanji + "\", question: \"What does this kanji mean?\", userInput: \"" + answer + "\"\n" +
+                "Respond with JSON in the following format in less than 20 words:\n" +
+                "{ isInputCorrectAnswer: \"true|false\" }");
+        ChatGptResponse response = chatGptService.askQuestion(botRequest, null);
+        String json = response.getChoices().get(0).getMessage().getContent();
+        System.out.println(json);
+        Gson gson = new Gson();
+        ChatGptEvaluation evaluation = gson.fromJson(json, ChatGptEvaluation.class);
+
+        return evaluation.isInputCorrectAnswer();
+    }
+}
 
 
 //    @CrossOrigin(origins = "*")

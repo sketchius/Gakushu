@@ -35,13 +35,27 @@
               {{ this.input }}
             </div>
           </div>
-          <button v-show="displayMode == 'result'">→</button>
-          <button v-show="displayMode == 'prompt'">✓</button>
+          <button v-on:click="handleSubmit()" v-show="displayMode == 'result'">
+            Next
+          </button>
+          <button v-on:click="handleSubmit()" v-show="displayMode == 'prompt'">
+            Enter
+          </button>
         </div>
 
         <div class="buttons">
-          <button v-show="mode == 'incorrect'">Try Again</button>
-          <button v-show="mode == 'incorrect'">See Answer</button>
+          <button v-on:click="handleTryAgain()" v-show="mode == 'incorrect'">
+            Try Again
+          </button>
+          <button v-on:click="handleShowAnswer()" v-show="mode == 'incorrect'">
+            See Answer
+          </button>
+          <button
+            v-on:click="handleAppealAnswer()"
+            v-show="mode == 'showAnswer'"
+          >
+            Appeal Evaluation
+          </button>
         </div>
       </div>
     </section>
@@ -124,6 +138,45 @@ export default {
       this.input = "";
       this.mode = "prompt";
       this.correct = false;
+    },
+    handleSubmit() {
+      if (this.input != "") this.processAnswer();
+    },
+    handleTryAgain() {
+      this.setPrompt();
+      this.focusInputField();
+    },
+    handleShowAnswer() {
+      apiService.getMeaning(this.challenge.id).then((response) => {
+        this.mode = "showAnswer";
+        this.outputJapanese = "";
+        const answers = response.data.join(", ");
+        this.outputEnglish = "The correct answer is: \n" + answers;
+      });
+    },
+    handleAppealAnswer() {
+      this.outputEnglish = "Computing...";
+      apiService
+        .appealAnswer(this.challenge.id, this.input)
+        .then((response) => {
+          const evaluation = response.data.evaluation;
+          switch (evaluation) {
+            case "Correct":
+              this.outputJapanese = "せいかい";
+              this.outputEnglish = "My bad, you are correct!";
+              this.correct = true;
+              this.displayMode = "result";
+              this.mode = "appealCorrect";
+              break;
+            case "Incorrect":
+              this.outputJapanese = "ちがいです";
+              this.outputEnglish = "Sorry. I double checked, it's not correct.";
+              this.correct = false;
+              this.displayMode = "result";
+              this.mode = "appealIncorrect";
+              break;
+          }
+        });
     },
   },
   mounted() {
@@ -247,7 +300,7 @@ main.incorrect {
   padding: 10px 15px;
   margin: 0;
   border: none;
-  padding-right: 30px;
+  padding-right: 15px;
   height: 50px;
   background-color: var(--current100);
 }
@@ -338,12 +391,11 @@ button {
   background-color: var(--current400);
   border-bottom-left-radius: 0;
   border-top-left-radius: 0;
-  width: 60px;
+  width: 75px;
   height: 70px;
-  font-size: 1.5rem;
+  font-size: 1rem;
   padding: 0;
   font-weight: 400;
-  padding-bottom: 4px;
 }
 #inputLabel {
   font-weight: 400;
@@ -357,7 +409,7 @@ button {
   border-right: 1px solid var(--current200);
   border-radius: 3rem;
   background-color: var(--current200);
-  border-radius: 1rem;
+  border-radius: 2rem;
   border-bottom-right-radius: 0;
   border-top-right-radius: 0;
   width: 90px;
