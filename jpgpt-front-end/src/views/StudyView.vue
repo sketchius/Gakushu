@@ -17,23 +17,31 @@
         </h3>
       </div>
 
-      <div>
-        <input
-          ref="inputField"
-          v-show="displayMode == 'prompt'"
-          v-model="input"
-          type="text"
-        />
-        <div
-          v-show="displayMode != 'prompt'"
-          :class="[correct ? 'correct' : 'incorrect']"
-          id="entered-input"
-        >
-          {{ this.input }}
+      <div id="inputControls">
+        <div id="inputWithButton">
+          <label id="inputLabel">Answer:</label>
+          <div id="inputContainer">
+            <input
+              ref="inputField"
+              v-show="displayMode == 'prompt'"
+              v-model="input"
+              type="text"
+            />
+            <div
+              v-show="displayMode != 'prompt'"
+              :class="[correct ? 'correct' : 'incorrect']"
+              id="entered-input"
+            >
+              {{ this.input }}
+            </div>
+          </div>
+          <button v-show="displayMode == 'result'">→</button>
+          <button v-show="displayMode == 'prompt'">✓</button>
         </div>
 
         <div class="buttons">
-          <button>Submit</button>
+          <button v-show="mode == 'incorrect'">Try Again</button>
+          <button v-show="mode == 'incorrect'">See Answer</button>
         </div>
       </div>
     </section>
@@ -48,6 +56,7 @@ export default {
   data() {
     return {
       displayMode: "prompt",
+      mode: "",
       input: "",
       outputJapanese: "",
       outputEnglish: "",
@@ -71,18 +80,21 @@ export default {
                 this.outputEnglish = "Correct!";
                 this.correct = true;
                 this.displayMode = "result";
+                this.mode = "correct";
                 break;
               case "Incorrect":
                 this.outputJapanese = "ちがいです";
                 this.outputEnglish = "That's not right.";
                 this.correct = false;
                 this.displayMode = "result";
+                this.mode = "incorrect";
                 break;
               case "LanguageError":
                 this.outputJapanese = "ちがいです";
                 this.outputEnglish = "Your answer must be in English!";
                 this.correct = false;
                 this.displayMode = "result";
+                this.mode = "incorrect";
                 break;
             }
           });
@@ -110,6 +122,7 @@ export default {
       this.outputJapanese = "このかんじのいみはなんですか？";
       this.outputEnglish = "What is does this Kanji mean?";
       this.input = "";
+      this.mode = "prompt";
       this.correct = false;
     },
   },
@@ -137,18 +150,21 @@ main {
   --primary100: rgb(241, 251, 255);
   --primary200: rgb(210, 233, 255);
   --primary300: rgb(129, 145, 218);
+  --primary400: rgb(101, 109, 221);
   --primary500: rgb(75, 68, 177);
   --primary700: rgb(53, 39, 116);
   --primary900: rgb(29, 17, 56);
   --success100: rgb(241, 253, 255);
   --success200: rgb(210, 255, 251);
   --success300: rgb(129, 218, 211);
+  --success400: rgb(91, 211, 185);
   --success500: rgb(68, 177, 153);
   --success700: rgb(39, 116, 97);
   --success900: rgb(17, 56, 40);
   --mistake100: rgb(255, 241, 244);
   --mistake200: rgb(255, 210, 227);
   --mistake300: rgb(218, 129, 171);
+  --mistake400: rgb(211, 96, 167);
   --mistake500: rgb(177, 68, 141);
   --mistake700: rgb(116, 39, 99);
   --mistake900: rgb(56, 17, 56);
@@ -157,6 +173,7 @@ main.prompt {
   --current100: var(--primary100);
   --current200: var(--primary200);
   --current300: var(--primary300);
+  --current400: var(--primary400);
   --current500: var(--primary500);
   --current700: var(--primary700);
   --current900: var(--primary900);
@@ -165,6 +182,7 @@ main.correct {
   --current100: var(--success100);
   --current200: var(--success200);
   --current300: var(--success300);
+  --current400: var(--success400);
   --current500: var(--success500);
   --current700: var(--success700);
   --current900: var(--success900);
@@ -173,6 +191,7 @@ main.incorrect {
   --current100: var(--mistake100);
   --current200: var(--mistake200);
   --current300: var(--mistake300);
+  --current400: var(--mistake400);
   --current500: var(--mistake500);
   --current700: var(--mistake700);
   --current900: var(--mistake900);
@@ -196,7 +215,7 @@ main.incorrect {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 20vh 40vh fit-content fit-content;
+  grid-template-rows: 20vh 40vh 200px;
   align-items: center;
   justify-items: center;
 }
@@ -223,44 +242,40 @@ main.incorrect {
   width: 15rem;
   height: 15rem;
 }
-input[type="text"] {
+#inputContainer {
   width: min(40vw, 400px);
+  padding: 10px 15px;
+  margin: 0;
+  border: none;
+  padding-right: 30px;
+  height: 50px;
+  background-color: var(--current100);
+}
+input[type="text"] {
+  width: 90%;
+  background: none;
   color: var(--current700);
   border: none;
-  margin: 2rem 0;
-  margin-bottom: 1rem;
-  border-radius: 2rem;
+  margin: 0;
   font-weight: 400;
-  padding: 10px 15px;
   font-size: 2rem;
   text-align: center;
-  box-shadow: 0 0 1rem var(--current300);
 }
 input[type="text"]:focus {
   outline: none !important;
   /* border: 1px solid rgb(82, 82, 161); */
 }
 #entered-input {
-  width: min(40vw, 400px);
+  width: 90%;
+  display: inline-block;
   color: var(--current700);
-  background-color: #eff7ff;
+  background: none;
+  height: 50px;
   border: none;
-  margin: 2rem 0;
-  margin-bottom: 1rem;
+  margin: 0;
   font-weight: 400;
-  padding: 10px 15px;
-  border-radius: 2rem;
   font-size: 2rem;
   text-align: center;
-  box-shadow: 0 0 1rem var(--current300);
-}
-#entered-input.correct {
-  color: rgb(2, 173, 102);
-  background-color: rgb(240, 255, 250);
-}
-#entered-input.incorrect {
-  color: rgb(173, 2, 45);
-  /* box-shadow: 0 0 1rem rgb(228, 152, 171); */
 }
 #output .english,
 #content .english {
@@ -293,17 +308,61 @@ input[type="text"]:focus {
   font-family: "Noto Serif JP", serif;
   line-height: 100%;
 }
+#inputControls {
+  align-self: flex-start;
+}
 .buttons {
   width: 100%;
   display: flex;
-  justify-content: flex-end;
+  gap: 1rem;
+
+  margin-top: 1rem;
+  justify-content: center;
 }
-.buttons button {
-  background-color: var(--current500);
-  color: white;
-  font-size: 1rem;
+button {
+  background-color: var(--current200);
+  color: var(--current500);
+  font-size: 1.5rem;
   border: none;
+  font-weight: 400;
   border-radius: 3rem;
   padding: 0.5rem 2rem;
+}
+#inputWithButton {
+  display: flex;
+  margin-top: 1rem;
+  align-items: center;
+}
+#inputWithButton button {
+  color: var(--current100);
+  background-color: var(--current400);
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
+  width: 60px;
+  height: 70px;
+  font-size: 1.5rem;
+  padding: 0;
+  font-weight: 400;
+  padding-bottom: 4px;
+}
+#inputLabel {
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--current400);
+  font-size: 1rem;
+  border: none;
+  border-right: 1px solid var(--current200);
+  border-radius: 3rem;
+  background-color: var(--current200);
+  border-radius: 1rem;
+  border-bottom-right-radius: 0;
+  border-top-right-radius: 0;
+  width: 90px;
+  height: 70px;
+  padding: 10px 15px;
+  padding-left: 20px;
 }
 </style>
