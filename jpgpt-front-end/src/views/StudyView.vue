@@ -39,22 +39,28 @@
             Next
           </button>
           <button v-on:click="handleSubmit()" v-show="displayMode == 'prompt'">
-            Enter
+            Send
           </button>
         </div>
 
         <div class="buttons">
+          <button
+            v-on:click="handleTryAgain()"
+            v-show="displayMode == 'prompt'"
+          >
+            <span class="hotkey">~</span> Hint
+          </button>
           <button v-on:click="handleTryAgain()" v-show="mode == 'incorrect'">
-            Try Again
+            <span class="hotkey">T</span>ry Again
           </button>
           <button v-on:click="handleShowAnswer()" v-show="mode == 'incorrect'">
-            See Answer
+            See <span class="hotkey">A</span>nswer
           </button>
           <button
             v-on:click="handleAppealAnswer()"
             v-show="mode == 'showAnswer'"
           >
-            Appeal Evaluation
+            Appeal <span class="hotkey">E</span>valuation
           </button>
         </div>
       </div>
@@ -163,14 +169,14 @@ export default {
           switch (evaluation) {
             case "Correct":
               this.outputJapanese = "せいかい";
-              this.outputEnglish = "My bad, you are correct!";
+              this.outputEnglish = "Your answer is accepted!";
               this.correct = true;
               this.displayMode = "result";
               this.mode = "appealCorrect";
               break;
             case "Incorrect":
               this.outputJapanese = "ちがいです";
-              this.outputEnglish = "Sorry. I double checked, it's not correct.";
+              this.outputEnglish = "Sorry, it's not right.";
               this.correct = false;
               this.displayMode = "result";
               this.mode = "appealIncorrect";
@@ -187,7 +193,21 @@ export default {
     self.setPrompt();
 
     window.addEventListener("keyup", function (event) {
-      if (event.key == "Enter" && self.input != "") self.processAnswer();
+      console.log(event.key);
+      switch (event.key.toLowerCase()) {
+        case "enter":
+          if (self.input != "") self.processAnswer();
+          break;
+        case "t":
+          if (self.mode == "incorrect") self.handleTryAgain();
+          break;
+        case "a":
+          if (self.mode == "incorrect") self.handleShowAnswer();
+          break;
+        case "e":
+          if (self.mode == "showAnswer") self.handleAppealAnswer();
+          break;
+      }
     });
   },
 };
@@ -220,7 +240,12 @@ main {
   --mistake400: rgb(211, 96, 167);
   --mistake500: rgb(177, 68, 141);
   --mistake700: rgb(116, 39, 99);
-  --mistake900: rgb(56, 17, 56);
+  --accent100: rgb(255, 254, 241);
+  --accent200: rgb(254, 255, 210);
+  --accent300: rgb(218, 217, 129);
+  --mistake400: rgb(211, 96, 167);
+  --mistake500: rgb(177, 68, 141);
+  --mistake700: rgb(116, 39, 99);
 }
 main.prompt {
   --current100: var(--primary100);
@@ -256,6 +281,10 @@ main.incorrect {
   align-items: center;
   flex-direction: column;
   background: linear-gradient(to top, var(--current300), var(--current100));
+}
+.hotkey {
+  text-decoration: underline var(--current200);
+  font-weight: 400;
 }
 
 /* .container.correct {
@@ -375,6 +404,9 @@ input[type="text"]:focus {
 button {
   background-color: var(--current200);
   color: var(--current500);
+
+  color: var(--current100);
+  background-color: var(--current400);
   font-size: 1.5rem;
   border: none;
   font-weight: 400;
@@ -391,9 +423,9 @@ button {
   background-color: var(--current400);
   border-bottom-left-radius: 0;
   border-top-left-radius: 0;
-  width: 75px;
+  width: 120px;
   height: 70px;
-  font-size: 1rem;
+  font-size: 1.5rem;
   padding: 0;
   font-weight: 400;
 }
@@ -404,15 +436,15 @@ button {
   justify-content: center;
   box-sizing: border-box;
   color: var(--current400);
-  font-size: 1rem;
+  font-size: 1.25rem;
   border: none;
   border-right: 1px solid var(--current200);
   border-radius: 3rem;
   background-color: var(--current200);
-  border-radius: 2rem;
+  border-radius: 0.5rem;
   border-bottom-right-radius: 0;
   border-top-right-radius: 0;
-  width: 90px;
+  width: 120px;
   height: 70px;
   padding: 10px 15px;
   padding-left: 20px;
