@@ -13,8 +13,11 @@
       />
 
       <div id="content-container">
+        <span id="content-label" class="english"
+          >{{ challenge.speakerRole }}:</span
+        >
         <h3 lang="ja" id="content" class="japanese">
-          {{ challenge.kanji }}
+          {{ challenge.text }}
         </h3>
       </div>
       <div id="inputControls">
@@ -75,7 +78,7 @@ import apiService from "../services/ApiService.ts";
 import outputComponent from "../components/Output.vue";
 
 export default {
-  name: "study-view",
+  name: "study-questions",
   data() {
     return {
       displayMode: "prompt",
@@ -94,37 +97,40 @@ export default {
     processAnswer() {
       if (this.displayMode == "prompt") {
         apiService
-          .checkAnswer(this.challenge.id, this.input)
+          .checkQuestionAnswer(this.challenge.id, this.input)
           .then((response) => {
-            const evaluation = response.data.evaluation;
-            switch (evaluation) {
-              case "Correct":
+            console.log(response.data);
+            if (response.data.myResponseWasInJapanese) {
+              console.log("Before eval");
+              if (response.data.correct) {
+                console.log("Correct!");
                 this.outputJapanese = "せいかい";
                 this.outputEnglish = "Correct!";
                 this.correct = true;
                 this.displayMode = "result";
                 this.mode = "correct";
-                break;
-              case "Incorrect":
+              } else {
+                console.log("Incorrect!");
                 this.outputJapanese = "ちがいです";
-                this.outputEnglish = "That's not right.";
+                this.outputEnglish = response.data.politeExplanation;
                 this.correct = false;
                 this.displayMode = "result";
                 this.mode = "incorrect";
-                break;
-              case "LanguageError":
-                this.outputJapanese = "ちがいです";
-                this.outputEnglish = "Your answer must be in English!";
-                this.correct = false;
-                this.displayMode = "result";
-                this.mode = "incorrect";
-                break;
+              }
+            } else {
+              console.log("Wrong language!");
+              this.outputJapanese = "せいかい";
+              this.outputEnglish = "Your answer must be in Japanese!";
+              this.correct = false;
+              this.displayMode = "result";
+              this.mode = "incorrect";
             }
+            console.log("End");
           });
       } else {
-        this.setPrompt();
         this.focusInputField();
         this.getNewChallenge();
+        this.setPrompt();
       }
     },
     focusInputField() {
@@ -134,16 +140,22 @@ export default {
       });
     },
     getNewChallenge() {
-      apiService.requestChallenge().then((response) => {
+      apiService.requestQuestionChallenge().then((response) => {
         console.log("Got response: ");
         console.log(response.data);
         this.challenge = response.data;
+        this.setPrompt();
       });
     },
     setPrompt() {
       this.displayMode = "prompt";
-      this.outputJapanese = "このかんじのいみはなんですか？";
-      this.outputEnglish = "What is does this Kanji mean?";
+      this.outputJapanese = "";
+      this.outputEnglish =
+        "You are a " +
+        this.challenge.userRole +
+        " " +
+        this.challenge.contextLong +
+        ".";
       this.input = "";
       this.mode = "prompt";
       this.correct = false;
@@ -254,7 +266,7 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
 @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500&family=Open+Sans:wght@300;400&display=swap");
 * {
   font-family: "Open Sans", sans-serif;
@@ -334,19 +346,31 @@ main.incorrect {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: 20vh 40vh 200px;
+  grid-template-rows: 20vh 30vh 200px;
   align-items: center;
   justify-items: center;
 }
 #content {
   margin: 0;
   margin-bottom: 0rem;
-  font-size: 10rem;
+  font-size: 4rem;
   color: var(--current500);
   position: relative;
   bottom: 0.5rem;
 }
-
+#content-label {
+  font-size: 3rem;
+  margin-right: 1rem;
+  color: var(--current400);
+}
+#content-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: center;
+  border-radius: 50rem;
+  width: 80vw;
+}
 #inputContainer {
   width: min(40vw, 400px);
   padding: 10px 15px;

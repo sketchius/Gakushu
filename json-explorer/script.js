@@ -38,12 +38,14 @@ fetch('./kanji.json')
                 }, "")}
             };
             const meanings = entry.meanings.reduce((full, current, index) => {
+                if (typeof current == "string" && !current.includes("Radical")){
                 if (index > 0)
                     return full + "|" + current;
                 else
                     return full + current;
+                } else return full;
             });
-            scriptString = scriptString + `('${entry.kanji}', '${entry.jlpt_new}', '${on_readings}', '${kun_readings}', '${meanings}'),\n`;
+            scriptString = scriptString + `('${entry.kanji}', 'kanji', '${entry.jlpt_new}', '${on_readings}', '${kun_readings}', '${meanings}'),\n`;
         })
 
         console.log(scriptString);

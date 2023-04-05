@@ -60,7 +60,7 @@ public class BotController {
             conversationService.addMessage("user", speechInput);
 
             System.out.println("Sending ChatGPT Request...");
-            ChatGptResponse response = chatGptService.askQuestion(speechRequest, conversationService);
+            ChatGptResponse response = chatGptService.askQuestion(speechRequest, conversationService, -1, null);
             System.out.println("Request Recieved.");
             String responseText = response.getChoices().get(0).getMessage().getContent();
             conversationService.addMessage("assistant", responseText);

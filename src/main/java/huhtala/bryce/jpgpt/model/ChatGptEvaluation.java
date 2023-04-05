@@ -1,30 +1,30 @@
 package huhtala.bryce.jpgpt.model;
 
 public class ChatGptEvaluation {
-    boolean isInputWrittenWithEnglish;
-    boolean isInputCorrectAnswer;
+    boolean isUserInputCorrectMeaning;
+    boolean isInputCorrectMeaningButMisspelled;
 
-    public ChatGptEvaluation(boolean isInputWrittenInEnglish, boolean isInputCorrectAnswer) {
-        this.isInputWrittenWithEnglish = isInputWrittenInEnglish;
-        this.isInputCorrectAnswer = isInputCorrectAnswer;
+    public ChatGptEvaluation(boolean isUserInputCorrectMeaning, boolean isInputCorrectMeaningButMisspelled) {
+        this.isUserInputCorrectMeaning = isUserInputCorrectMeaning;
+        this.isInputCorrectMeaningButMisspelled = isInputCorrectMeaningButMisspelled;
     }
 
     public ChatGptEvaluation() {
     }
 
-    public boolean isInputWrittenWithEnglish() {
-        return isInputWrittenWithEnglish;
+    public boolean isUserInputCorrectMeaning() {
+        return isUserInputCorrectMeaning;
     }
 
-    public void setInputWrittenWithEnglish(boolean inputWrittenWithEnglish) {
-        isInputWrittenWithEnglish = inputWrittenWithEnglish;
+    public void setUserInputCorrectMeaning(boolean userInputCorrectMeaning) {
+        isUserInputCorrectMeaning = userInputCorrectMeaning;
     }
 
-    public boolean isInputCorrectAnswer() {
-        return isInputCorrectAnswer;
+    public boolean isInputCorrectMeaningButMisspelled() {
+        return isInputCorrectMeaningButMisspelled;
     }
 
-    public void setInputCorrectAnswer(boolean inputCorrectAnswer) {
-        isInputCorrectAnswer = inputCorrectAnswer;
+    public void setInputCorrectMeaningButMisspelled(boolean inputCorrectMeaningButMisspelled) {
+        isInputCorrectMeaningButMisspelled = inputCorrectMeaningButMisspelled;
     }
 }

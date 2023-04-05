@@ -28,16 +28,18 @@ public class ChatGptService {
         return responseEntity.getBody();
     }
 
-    public ChatGptResponse askQuestion(BotRequest botRequest, ConversationService conversationService) {
+    public ChatGptResponse askQuestion(BotRequest botRequest, ConversationService conversationService, int maxTokens, String stop) {
         ConversationService newConversationService = new ConversationService();
+        if (maxTokens == -1) maxTokens = ChatGptConfig.MAX_TOKEN;
         newConversationService.addMessage("user",botRequest.getMessage());
         return getResponse(
                 createRequestEntity(
                         new ChatGptRequest(ChatGptConfig.MODEL,
                                 newConversationService.getMessageArray(),
-                                ChatGptConfig.MAX_TOKEN,
+                                maxTokens,
                                 ChatGptConfig.TEMPERATURE,
-                                ChatGptConfig.TOP_P)
+                                ChatGptConfig.TOP_P,
+                                stop)
                 )
         );
     }

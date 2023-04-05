@@ -13,12 +13,20 @@ export default {
     return http.get("/api/sets/1/random");
   },
 
+  requestQuestionChallenge() {
+    return http.get("/api/question/random");
+  },
+
   getMeaning(itemId: number) {
     return http.get(`/api/kanji/${itemId}/meaning`);
   },
 
   checkAnswer(itemId: number, answer: string) {
     return http.post(`api/kanji/${itemId}?answer=${answer}`);
+  },
+
+  checkQuestionAnswer(itemId: number, answer: string) {
+    return http.post(`api/question/${itemId}?answer=${answer}`);
   },
 
   appealAnswer(itemId: number, answer: string) {
