@@ -35,63 +35,6 @@ public class BotController {
         this.speechToTextService = speechToTextService;
     }
 
-    @PostMapping("/send")
-    public ChatGptResponse sendMessage(@RequestBody BotRequest botRequest) {
-        try {
-            String speechInput = "";
-            SpeechToTextService speechToTextService = new SpeechToTextService();
-            try {
-                speechInput = speechToTextService.generateTranscript(8000,"japanese");
-                System.out.println("Speech Input: " + speechInput);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-
-            RecorderService recorderService = new RecorderService();
-            recorderService.record(5000);
-            long delayEnd = System.currentTimeMillis() + 5000;
-            while (System.currentTimeMillis() < delayEnd) {}
-
-//            speechInput = speechToTextService.getTranscriptFromAudioFile();
-//            System.out.println("Recieved transcript: " + speechInput);
-//
-            BotRequest speechRequest = new BotRequest(speechInput);
-            conversationService.addMessage("user", speechInput);
-
-            System.out.println("Sending ChatGPT Request...");
-            ChatGptResponse response = chatGptService.askQuestion(speechRequest, conversationService, -1, null);
-            System.out.println("Request Recieved.");
-            String responseText = response.getChoices().get(0).getMessage().getContent();
-            conversationService.addMessage("assistant", responseText);
-            System.out.println("");
-            ByteString byteString = null;
-            try {
-                System.out.println("Sending TextToSpeech Request...");
-                byteString = textToSpeechService.generate(responseText);
-                System.out.println("Request Recieved.");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            System.out.println("");
-
-            System.out.println("Playing MP3...");
-            InputStream targetStream = new ByteArrayInputStream(byteString.toByteArray());
-            Player playMP3;
-            try {
-                playMP3 = new Player(targetStream);
-                playMP3.play();
-            } catch (JavaLayerException e) {
-                e.printStackTrace();
-            }
-            System.out.println("Done.");
-
-
-            return response;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
-    }
 
     @RequestMapping(value = "/speech.mp3", method = RequestMethod.GET)
     public void getFile(HttpServletResponse response) {

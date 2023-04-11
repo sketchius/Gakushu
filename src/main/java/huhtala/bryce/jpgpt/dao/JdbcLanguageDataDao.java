@@ -1,14 +1,16 @@
 package huhtala.bryce.jpgpt.dao;
 
+import huhtala.bryce.jpgpt.model.Item;
+import huhtala.bryce.jpgpt.model.ItemComparator;
 import huhtala.bryce.jpgpt.model.Kanji;
 import huhtala.bryce.jpgpt.model.Question;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
-import huhtala.bryce.jpgpt.model.Set;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -25,9 +27,12 @@ public class JdbcLanguageDataDao implements LanguageDataDao {
 
 
     @Override
-    public Kanji getKanjiById(int id) {
-        String sql = "SELECT item_id, kanji, jlpt_level, on_yomi_readings, kun_yomi_readings, meanings FROM kanji\n" +
-                "WHERE item_id = ?";
+    public Item getItemById(int id) {
+        String sql = "SELECT item.item_id, cat.item_category_name, item.context, item.jlpt_level, item.question_candidate, item.text, item.hiragana, item.meaning, COALESCE(progress.correct, 0) AS correct, COALESCE(progress.incorrect, 0) AS incorrect\n" +
+                "FROM item\n" +
+                "LEFT JOIN user_progress progress ON progress.item_id = item.item_id AND progress.user_id = 1\n" +
+                "JOIN item_category cat ON item.item_category_id = cat.item_category_id\n" +
+                "WHERE item.item_id = ?;";
         SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, id);
         if (rowSet.next()) {
             return mapItemDTO(rowSet);
@@ -56,18 +61,19 @@ public class JdbcLanguageDataDao implements LanguageDataDao {
     }
 
     @Override
-    public Kanji getRandomKanji() {
-        List<Kanji> setKanjis = new ArrayList<>();
-        String sql = "SELECT item_id, kanji, jlpt_level, on_yomi_readings, kun_yomi_readings, meanings FROM kanji\n";
+    public Item getChallengeItem() {
+        List<Item> items = new ArrayList<>();
+        String sql = "SELECT item.item_id, cat.item_category_name, item.context, item.jlpt_level, item.question_candidate, item.text, item.hiragana, item.meaning, COALESCE(progress.correct, 0) AS correct, COALESCE(progress.incorrect, 0) AS incorrect\n" +
+                "FROM item\n" +
+                "LEFT JOIN user_progress progress ON progress.item_id = item.item_id AND progress.user_id = 1\n" +
+                "JOIN item_category cat ON item.item_category_id = cat.item_category_id;";
         SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql);
         while (rowSet.next()) {
-            setKanjis.add(mapItemDTO(rowSet));
+            items.add(mapItemDTO(rowSet));
         }
-        if (setKanjis.size() > 1) {
-            Random random = new Random();
-            return setKanjis.get(random.nextInt(setKanjis.size()));
-        }
-        return null;
+        Collections.sort(items, new ItemComparator());
+
+        return items.get(0);
     }
 
     @Override
@@ -103,15 +109,19 @@ public class JdbcLanguageDataDao implements LanguageDataDao {
 //        return set;
 //    }
 
-    public Kanji mapItemDTO(SqlRowSet sqlRowSet) {
-        Kanji kanji = new Kanji();
-        kanji.setId(sqlRowSet.getInt("item_id"));
-        kanji.setKanji(sqlRowSet.getString("kanji"));
-        kanji.setJlptLevel(sqlRowSet.getInt("jlpt_level"));
-        kanji.setOnYomiReadings(sqlRowSet.getString("on_yomi_readings"));
-        kanji.setKunYomiReadings(sqlRowSet.getString("kun_yomi_readings"));
-        kanji.setMeanings(sqlRowSet.getString("meanings"));
-        return kanji;
+    public Item mapItemDTO(SqlRowSet sqlRowSet) {
+        Item item = new Item();
+        item.setItemId(sqlRowSet.getInt("item_id"));
+        item.setItemCategoryName(sqlRowSet.getString("item_category_name"));
+        item.setContext(sqlRowSet.getString("context"));
+        item.setJlptLevel(sqlRowSet.getInt("jlpt_level"));
+        item.setQuestionCandidate(sqlRowSet.getBoolean("question_candidate"));
+        item.setText(sqlRowSet.getString("text"));
+        item.setHiragana(sqlRowSet.getString("hiragana"));
+        item.setMeaning(sqlRowSet.getString("meaning"));
+        item.setCorrect(sqlRowSet.getInt("correct"));
+        item.setIncorrect(sqlRowSet.getInt("incorrect"));
+        return item;
     }
 
     public Question mapQuestionDTO(SqlRowSet sqlRowSet) {

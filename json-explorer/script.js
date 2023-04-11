@@ -45,7 +45,9 @@ fetch('./kanji.json')
                     return full + current;
                 } else return full;
             });
-            scriptString = scriptString + `('${entry.kanji}', 'kanji', '${entry.jlpt_new}', '${on_readings}', '${kun_readings}', '${meanings}'),\n`;
+            // scriptString = scriptString + `('${entry.kanji}', 'kanji', '${entry.jlpt_new}', '${on_readings}', '${kun_readings}', '${meanings}'),\n`;
+            // scriptString = scriptString + `kanji\t${entry.kanji}\t${entry.jlpt_new}\t${on_readings}\t${kun_readings}\t${meanings}\n`;
+            // scriptString = scriptString + `${kun_readings}\t;${on_readings}\t\n`;
         })
 
         console.log(scriptString);

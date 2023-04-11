@@ -2,13 +2,14 @@
   <div id="display">
     <h2 id="output">
       <!-- <div lang="ja" class="japanese">{{ outputJapanese }}</div> -->
-      <div id="output-context" class="english">
-        {{ outputContext }}
-      </div>
       <div id="output" class="english">{{ output }}</div>
     </h2>
     <div id="content-container" :class="[contentDisplay]">
-      <div id="content" :class="[contentDisplay]" translate="no">
+      <div
+        id="content"
+        :class="[contentDisplay, contentLanguage]"
+        translate="no"
+      >
         {{ content }}
       </div>
     </div>
@@ -18,7 +19,13 @@
 <script>
 export default {
   name: "output-component",
-  props: ["output", "outputContext", "content", "contentDisplay"],
+  props: [
+    "output",
+    "outputContext",
+    "content",
+    "contentDisplay",
+    "contentLanguage",
+  ],
 };
 </script>
 <style>
@@ -26,11 +33,11 @@ export default {
   width: 100%;
   height: 100%;
   display: grid;
-  padding-bottom: 2rem;
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr fit-content;
+  grid-template-rows: 1fr 2fr;
   align-items: center;
   justify-items: center;
+  margin-bottom: 2rem;
 }
 #output {
   white-space: pre-line;
@@ -38,16 +45,12 @@ export default {
   font-weight: 400;
   font-size: 3rem;
   margin: 0;
-  align-self: flex-end;
+  align-self: center;
 }
 
-#output-context {
-  white-space: pre-line;
-  color: rgb(var(--current300));
-  font-weight: 300;
-  font-size: 2.5rem;
-  margin: 0;
-  align-self: flex-end;
+#content-container {
+  align-self: center;
+  margin-top: 1rem;
 }
 #content-container.normal {
   background: radial-gradient(
@@ -100,30 +103,36 @@ export default {
 }
 
 #content.normal {
-  font-family: "Noto Sans JP", sans-serif;
   font-weight: 300;
   margin: 0;
-  font-size: clamp(5rem, 10vw, 7.5rem);
+  font-size: 5rem;
   color: rgb(var(--current500));
   position: relative;
   bottom: 0.5rem;
 }
 
 #content.compact {
-  font-family: "Noto Sans JP", sans-serif;
   margin: 0;
-  font-size: 10rem;
+  font-size: 7.5rem;
   color: rgb(var(--current500));
   position: relative;
   bottom: 0.5rem;
 }
 
 #content.long {
-  font-family: "Noto Sans JP", sans-serif;
   position: relative;
   margin: 0;
-  font-size: 5rem;
+  font-size: 3.5rem;
   color: rgb(var(--current400));
   bottom: 0.5rem;
+}
+
+.english {
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 400;
+}
+
+.japanse {
+  font-family: "Noto Sans JP", sans-serif;
 }
 </style>

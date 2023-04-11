@@ -1,70 +1,74 @@
 <template>
   <main
-    translate="no"
-    class="container"
     :class="[
-      displayMode == 'prompt' ? 'prompt' : correct ? 'correct' : 'incorrect',
+      displayMode == 'prompt' ? 'prompt' : correct ? 'success' : 'mistake',
     ]"
   >
-    <section class="grid">
-      <output-component
-        v-bind:output-japanese="this.outputJapanese"
-        v-bind:output-english="this.outputEnglish"
-      />
+    <h1>{{ this.topic }}</h1>
+    <output-component
+      v-bind:output="this.output"
+      v-bind:content="this.content"
+      v-bind:content-display="this.contentDisplay"
+      v-bind:content-language="this.contentLanguage"
+    />
 
-      <div id="content-container">
-        <h3 lang="ja" id="content" class="japanese">
-          {{ challenge.kanji }}
-        </h3>
-      </div>
-      <div id="inputControls">
-        <div id="inputWithButton">
-          <label id="inputLabel">Answer:</label>
-          <div id="inputContainer">
-            <input
-              autocomplete="off"
-              id="textInput"
-              ref="inputField"
-              v-show="displayMode == 'prompt'"
-              v-model="input"
-              type="text"
-            />
-            <div
-              v-show="displayMode != 'prompt'"
-              :class="[correct ? 'correct' : 'incorrect']"
-              id="entered-input"
-            >
-              {{ this.input }}
-            </div>
+    <section id="controls">
+      <div id="inputWithButton">
+        <label id="inputLabel">Response:</label>
+        <div id="inputContainer">
+          <input
+            autocomplete="off"
+            id="textInput"
+            ref="inputField"
+            v-model="input"
+            v-show="displayMode == 'prompt'"
+            v-on="handleInput()"
+            type="text"
+          />
+          <div
+            v-show="displayMode != 'prompt'"
+            :class="[correct ? 'correct' : 'incorrect']"
+            id="entered-input"
+          >
+            {{ this.input }}
           </div>
-          <button v-on:click="handleSubmit()" v-show="displayMode == 'result'">
-            Next
-          </button>
-          <button v-on:click="handleSubmit()" v-show="displayMode == 'prompt'">
-            Send
-          </button>
         </div>
+        <button v-on:click="handleSubmit()" v-show="displayMode == 'result'">
+          Next
+        </button>
+        <button v-on:click="handleSubmit()" v-show="displayMode == 'prompt'">
+          <span v-if="!this.loading">Send</span>
+          <animated-loader v-if="this.loading" />
+        </button>
+      </div>
 
-        <div class="buttons">
-          <button
-            v-on:click="handleHint()"
-            v-show="displayMode == 'prompt' && mode != 'hint'"
-          >
-            <span class="hotkey">~</span> Hint
-          </button>
-          <button v-on:click="handleTryAgain()" v-show="mode == 'incorrect'">
-            <span class="hotkey">T</span>Try Again
-          </button>
-          <button v-on:click="handleShowAnswer()" v-show="mode == 'incorrect'">
-            <span class="hotkey">A</span>See Answer
-          </button>
-          <button
-            v-on:click="handleAppealAnswer()"
-            v-show="mode == 'showAnswer'"
-          >
-            <span class="hotkey">E</span>Appeal Evaluation
-          </button>
-        </div>
+      <div class="buttons">
+        <button
+          v-on:click="handleHint()"
+          v-show="displayMode == 'prompt' && mode != 'hint'"
+        >
+          <p class="hotkey">F1</p>
+          <p class="text">Hint</p>
+        </button>
+        <button
+          v-on:click.prevent="handleHiragana()"
+          v-show="displayMode == 'prompt' && showHiraganaToggle == true"
+        >
+          <p class="hotkey">F2</p>
+          <p class="text">{{ kanjiOrHiragana }}</p>
+        </button>
+        <button v-on:click="handleTryAgain()" v-show="mode == 'incorrect'">
+          <p class="hotkey">T</p>
+          <p class="text">Try Again</p>
+        </button>
+        <button v-on:click="handleShowAnswer()" v-show="mode == 'incorrect'">
+          <p class="hotkey">A</p>
+          <p class="text">See Answer</p>
+        </button>
+        <!-- <button v-on:click="handleAppealAnswer()" v-show="mode == 'showAnswer'">
+          <p class="hotkey">E</p>
+          <p class="text">Appeal Evaluation</p>
+        </button> -->
       </div>
     </section>
   </main>
@@ -73,56 +77,55 @@
 <script>
 import apiService from "../services/ApiService.ts";
 import outputComponent from "../components/Output.vue";
+import animatedLoader from "../components/AnimatedLoader.vue";
+
+import * as wanakana from "wanakana";
 
 export default {
   name: "study-view",
   data() {
     return {
+      loading: true,
       displayMode: "prompt",
       mode: "",
       input: "",
-      outputJapanese: "",
-      outputEnglish: "",
+      englishInput: true,
+      output: "",
+      content: "",
+      contentType: "",
+      contentLanguage: "Japanese",
+      contentId: 0,
+      topic: "",
+      contentDisplay: "normal",
       correct: false,
-      challenge: {
-        id: -1,
-        kanji: "",
-      },
+      showHiraganaToggle: false,
+      showHiragana: false,
+      kanjiOrHiragana: "Show Hiragana",
     };
   },
   methods: {
     processAnswer() {
+      debugger;
       if (this.displayMode == "prompt") {
         apiService
-          .checkAnswer(this.challenge.id, this.input)
+          .checkAnswer(this.contentId, this.contentType, this.input)
           .then((response) => {
-            const evaluation = response.data.evaluation;
-            switch (evaluation) {
-              case "Correct":
-                this.outputJapanese = "せいかい";
-                this.outputEnglish = "Correct!";
-                this.correct = true;
-                this.displayMode = "result";
-                this.mode = "correct";
-                break;
-              case "Incorrect":
-                this.outputJapanese = "ちがいです";
-                this.outputEnglish = "That's not right.";
-                this.correct = false;
-                this.displayMode = "result";
-                this.mode = "incorrect";
-                break;
-              case "LanguageError":
-                this.outputJapanese = "ちがいです";
-                this.outputEnglish = "Your answer must be in English!";
-                this.correct = false;
-                this.displayMode = "result";
-                this.mode = "incorrect";
-                break;
+            const evaluation = response.data;
+            if (evaluation) {
+              // this.outputJapanese = "せいかい";
+              this.output = "Correct!";
+              this.correct = true;
+              this.displayMode = "result";
+              this.mode = "correct";
+            } else {
+              // this.outputJapanese = "ちがいです";
+              this.output = "Sorry, that's not right.";
+              this.correct = false;
+              this.displayMode = "result";
+              this.mode = "incorrect";
             }
           });
       } else {
-        this.setPrompt();
         this.focusInputField();
         this.getNewChallenge();
       }
@@ -134,19 +137,120 @@ export default {
       });
     },
     getNewChallenge() {
+      console.log("getNewChallenge()");
+      this.setLoading();
       apiService.requestChallenge().then((response) => {
-        console.log("Got response: ");
-        console.log(response.data);
-        this.challenge = response.data;
+        const data = response.data;
+        this.content = data.content;
+        this.contentId = data.id;
+        this.contentType = data.type;
+        this.showHiraganaToggle = false;
+        this.showHiragana = false;
+        this.kanjiOrHiragana = "Hiragana";
+        let useHiragana = false;
+        console.log(data);
+        switch (data.topic) {
+          case "Kanji":
+            switch (data.type) {
+              case "meaning":
+                this.output = "What is the meaning of this character?";
+                this.contentLanguage = "japanese";
+                this.englishInput = true;
+                break;
+              case "kunreading":
+                this.output = "What is the Kun'Yomi reading of this character?";
+                this.contentLanguage = "japanese";
+                this.englishInput = false;
+                break;
+              case "onreading":
+                this.output = "What is the On'Yomi reading of this character?";
+                this.contentLanguage = "japanese";
+                this.englishInput = false;
+                break;
+            }
+            break;
+          case "Vocab":
+            switch (data.type) {
+              case "e2j":
+                this.output = "How do you say this in Japanese?";
+                this.contentLanguage = "english";
+                this.englishInput = false;
+                break;
+              case "j2e":
+                this.output = "What does this mean in English?";
+                this.contentLanguage = "japanese";
+                this.englishInput = true;
+                useHiragana = true;
+                break;
+            }
+            break;
+          case "Conversation":
+            switch (data.type) {
+              case "e2j":
+                this.output = "How do you say this in Japanese?";
+                this.englishInput = false;
+                this.contentLanguage = "english";
+                break;
+              case "j2e":
+                this.output = "What does this mean in English?";
+                this.englishInput = true;
+                this.contentLanguage = "japanese";
+                useHiragana = true;
+                break;
+              case "question":
+                this.output = "How would you respond to this in Japanese?";
+                this.englishInput = false;
+                this.contentLanguage = "japanese";
+                useHiragana = true;
+                break;
+            }
+            break;
+        }
+
+        this.currentId = data.id;
+        this.displayMode = "prompt";
+        this.mode = "prompt";
+        this.topic = data.topic;
+        this.loading = false;
+        if (
+          useHiragana &&
+          data.altContent &&
+          !wanakana.isHiragana(data.content) &&
+          !wanakana.isKatakana(data.content)
+        ) {
+          this.showHiraganaToggle = true;
+          this.altContent = data.altContent;
+        }
+        // if (this.englishInput) {
+        //   if (this.wanaKanaBound) {
+        //     wanakana.unbind(this.inputElement);
+        //     this.wanakanaBound = false;
+        //   }
+        // } else {
+        //   wanakana.bind(this.inputElement);
+        //   this.wanakanaBound = true;
+        // }
+        this.updateContentDisplay();
+        this.focusInputField();
       });
     },
-    setPrompt() {
+    setLoading() {
+      this.loading = true;
       this.displayMode = "prompt";
-      this.outputJapanese = "このかんじのいみはなんですか？";
-      this.outputEnglish = "What is does this Kanji mean?";
+      this.output = "Loading Content...";
       this.input = "";
       this.mode = "prompt";
       this.correct = false;
+      this.topic = "";
+    },
+    updateContentDisplay() {
+      if (this.content.length == 1) {
+        this.contentDisplay = "compact";
+      } else if (this.content.length < 4) {
+        this.contentDisplay = "normal";
+      } else {
+        this.contentDisplay = "long";
+      }
     },
     handleHint() {
       apiService.getMeaning(this.challenge.id).then((response) => {
@@ -169,20 +273,40 @@ export default {
         }
       });
     },
+    handleHiragana() {
+      const currContent = this.content;
+      this.content = this.altContent;
+      this.altContent = currContent;
+      this.showHiragana = !this.showHiragana;
+      if (this.showHiragana) this.kanjiOrHiragana = "Show Kanji";
+      else this.kanjiOrHiragana = "Show Hiragana";
+      this.updateContentDisplay();
+    },
     handleSubmit() {
+      debugger;
       if (this.input != "") this.processAnswer();
     },
     handleTryAgain() {
       this.setPrompt();
       this.focusInputField();
     },
+    handleInput() {
+      if (!this.englishInput) {
+        this.input = wanakana.toHiragana(this.input, { IMEMode: true });
+      }
+    },
     handleShowAnswer() {
-      apiService.getMeaning(this.challenge.id).then((response) => {
-        this.mode = "showAnswer";
-        this.outputJapanese = "";
-        const answers = response.data.join(", ");
-        this.outputEnglish = "The correct answer is: \n" + answers;
-      });
+      apiService
+        .getAnswer(this.contentId, this.contentType)
+        .then((response) => {
+          this.mode = "showAnswer";
+          this.outputJapanese = "";
+          const multipleAnswers = response.data.length > 1;
+          const answers = response.data.join(", ");
+          this.output = `The correct ${
+            multipleAnswers ? "answers are" : "answer is"
+          }:\n${answers}`;
+        });
     },
     handleAppealAnswer() {
       this.outputEnglish = "Computing...";
@@ -212,17 +336,18 @@ export default {
   mounted() {
     // eslint-disable-next-line
     let self = this;
-    self.focusInputField();
     self.getNewChallenge();
-    self.setPrompt();
+    self.focusInputField();
 
-    document
-      .getElementById("textInput")
-      .addEventListener("keydown", (event) => {
-        if (event.key == "`" || event.key == "~") {
-          event.preventDefault();
-        }
-      });
+    const textInput = document.getElementById("textInput");
+
+    textInput.addEventListener("keydown", (event) => {
+      if (event.key == "`" || event.key == "~") {
+        event.preventDefault();
+      }
+    });
+
+    self.inputElement = textInput;
 
     window.addEventListener("keyup", function (event) {
       switch (event.key.toLowerCase()) {
@@ -239,6 +364,10 @@ export default {
         case "e":
           if (self.mode == "showAnswer") self.handleAppealAnswer();
           break;
+        case "F2":
+          if (self.mode == "prompt" && self.showHiraganaToggle == true)
+            self.handleHiragana();
+          break;
         case "`":
         case "~":
           if (self.input.charAt(self.input.length - 1) == "`")
@@ -250,43 +379,15 @@ export default {
   },
   components: {
     outputComponent,
+    animatedLoader,
   },
 };
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500&family=Open+Sans:wght@300;400&display=swap");
 * {
-  font-family: "Open Sans", sans-serif;
+  font-family: "Noto Sans", sans-serif;
   font-weight: 300;
-}
-main {
-  --primary100: rgb(241, 251, 255);
-  --primary200: rgb(210, 233, 255);
-  --primary300: rgb(129, 145, 218);
-  --primary400: rgb(101, 109, 221);
-  --primary500: rgb(75, 68, 177);
-  --primary700: rgb(53, 39, 116);
-  --primary900: rgb(29, 17, 56);
-  --success100: rgb(241, 253, 255);
-  --success200: rgb(176, 246, 240);
-  --success300: rgb(129, 218, 211);
-  --success400: rgb(81, 195, 171);
-  --success500: rgb(68, 177, 153);
-  --success700: rgb(39, 116, 97);
-  --success900: rgb(17, 56, 40);
-  --mistake100: rgb(255, 241, 244);
-  --mistake200: rgb(255, 210, 227);
-  --mistake300: rgb(218, 129, 171);
-  --mistake400: rgb(211, 96, 167);
-  --mistake500: rgb(177, 68, 141);
-  --mistake700: rgb(116, 39, 99);
-  --accent100: rgb(255, 254, 241);
-  --accent200: rgb(254, 255, 210);
-  --accent300: rgb(218, 217, 129);
-  --mistake400: rgb(211, 96, 167);
-  --mistake500: rgb(177, 68, 141);
-  --mistake700: rgb(116, 39, 99);
 }
 main.prompt {
   --current100: var(--primary100);
@@ -297,7 +398,7 @@ main.prompt {
   --current700: var(--primary700);
   --current900: var(--primary900);
 }
-main.correct {
+main.success {
   --current100: var(--success100);
   --current200: var(--success200);
   --current300: var(--success300);
@@ -306,7 +407,7 @@ main.correct {
   --current700: var(--success700);
   --current900: var(--success900);
 }
-main.incorrect {
+main.mistake {
   --current100: var(--mistake100);
   --current200: var(--mistake200);
   --current300: var(--mistake300);
@@ -315,21 +416,56 @@ main.incorrect {
   --current700: var(--mistake700);
   --current900: var(--mistake900);
 }
+h1 {
+  display: block;
+  width: 100%;
+  opacity: 100%;
+  color: rgb(var(--current100));
+  /* color: white; */
+  font-weight: 400;
+  font-size: 5rem;
+  margin: 2rem;
+  padding-bottom: 1rem;
+  letter-spacing: 0.5rem;
+  /* text-transform: uppercase; */
+  background: linear-gradient(
+    to right,
+    rgba(var(--current200), 0),
+    rgba(var(--current300), 0.75) 25%,
+    rgba(var(--current300), 0.75) 50%,
+    rgba(var(--current300), 0.75) 75%,
+    rgba(var(--current200), 0)
+  );
+  line-height: 6.5rem;
+}
 .container {
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  background: linear-gradient(to top, var(--current300), var(--current100));
+  background: linear-gradient(
+    to top,
+    rgb(var(--current300)),
+    rgb(var(--current100))
+  );
 }
 
-/* .container.correct {
-  background: linear-gradient(to top, rgb(210, 255, 234), rgb(241, 255, 246));
+main {
+  background: linear-gradient(
+    to top,
+    rgb(var(--current300)),
+    rgb(var(--current100))
+  );
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: min-content 1.5fr 1fr;
+  align-items: center;
+  justify-items: center;
 }
-.container.incorrect {
-  background: linear-gradient(to top, rgb(255, 210, 220), rgb(255, 241, 248));
-} */
 .grid {
   width: 100%;
   display: grid;
@@ -338,15 +474,16 @@ main.incorrect {
   align-items: center;
   justify-items: center;
 }
-#content {
-  margin: 0;
-  margin-bottom: 0rem;
-  font-size: 10rem;
-  color: var(--current500);
-  position: relative;
-  bottom: 0.5rem;
+#content-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: center;
+  border: 5px rgb(var(--current300)) double;
+  border-radius: 50rem;
+  width: 15rem;
+  height: 15rem;
 }
-
 #inputContainer {
   width: min(40vw, 400px);
   padding: 10px 15px;
@@ -354,12 +491,12 @@ main.incorrect {
   border: none;
   padding-right: 15px;
   height: 50px;
-  background-color: var(--current100);
+  background-color: rgb(var(--current100));
 }
 input[type="text"] {
   width: 90%;
   background: none;
-  color: var(--current700);
+  color: rgb(var(--current700));
   border: none;
   margin: 0;
   font-weight: 400;
@@ -373,7 +510,7 @@ input[type="text"]:focus {
 #entered-input {
   width: 90%;
   display: inline-block;
-  color: var(--current700);
+  color: rgb(var(--current700));
   background: none;
   height: 50px;
   border: none;
@@ -410,11 +547,13 @@ input[type="text"]:focus {
   color: rgb(214, 103, 131);
 }
 .japanese {
-  font-family: "Noto Serif JP", serif;
+  font-family: "Noto Sans JP", serif;
   line-height: 100%;
 }
-#inputControls {
-  align-self: flex-start;
+#controls {
+  display: grid;
+  grid-template-rows: 1fr 2fr;
+  align-self: center;
 }
 .buttons {
   width: 100%;
@@ -424,26 +563,29 @@ input[type="text"]:focus {
   margin-top: 1rem;
   justify-content: center;
 }
-button {
-  color: var(--current100);
-  background-color: var(--current400);
-  font-size: 1.5rem;
+.buttons button {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: rgb(var(--current400));
   border: none;
-
+  height: 6.5rem;
+  width: max-content;
   font-weight: 400;
-  border-radius: 3rem;
-  padding: 0.5rem 2rem;
-  padding-left: 1.5rem;
+  border-radius: 100rem;
+  align-items: center;
+}
+.buttons .text {
+  margin: 0 1rem;
+  color: rgb(var(--current100));
+  font-size: 1.5rem;
 }
 .hotkey {
-  margin-right: 0.5rem;
   display: inline-block;
-  background-color: var(--current200);
-  color: var(--current500);
-  width: 2.5ch;
-  aspect-ratio: 1;
+  color: rgb(var(--current200));
   border-radius: 10rem;
-  font-size: 2rem;
+  font-size: 2.5rem;
+  margin: 0;
   font-weight: 400;
 }
 #inputWithButton {
@@ -452,8 +594,10 @@ button {
   align-items: center;
 }
 #inputWithButton button {
-  color: var(--current100);
-  background-color: var(--current400);
+  color: rgb(var(--current100));
+  background-color: rgb(var(--current400));
+  border-style: none;
+  border-radius: 10rem;
   border-bottom-left-radius: 0;
   border-top-left-radius: 0;
   width: 120px;
@@ -468,12 +612,12 @@ button {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  color: var(--current400);
+  color: rgb(var(--current400));
   font-size: 1.25rem;
   border: none;
-  border-right: 1px solid var(--current200);
+  border-right: 1px solid rgb(var(--current200));
   border-radius: 3rem;
-  background-color: var(--current200);
+  background-color: rgb(var(--current200));
   border-radius: 0.5rem;
   border-bottom-right-radius: 0;
   border-top-right-radius: 0;
@@ -481,5 +625,6 @@ button {
   height: 70px;
   padding: 10px 15px;
   padding-left: 20px;
+  margin-right: 0.3rem;
 }
 </style>

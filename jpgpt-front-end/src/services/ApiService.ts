@@ -10,23 +10,27 @@ export default {
   },
 
   requestChallenge() {
-    return http.get("/api/sets/1/random");
+    return http.get("/api/item");
   },
 
   requestQuestionChallenge() {
     return http.get("/api/question/random");
   },
 
-  getMeaning(itemId: number) {
-    return http.get(`/api/kanji/${itemId}/meaning`);
+  getHiragana(itemId: number, type: string) {
+    return http.get(`/api/item/${itemId}/hiragana?type=${type}`);
   },
 
-  checkAnswer(itemId: number, answer: string) {
-    return http.post(`api/kanji/${itemId}?answer=${answer}`);
+  getAnswer(itemId: number, type: string) {
+    return http.get(`/api/item/${itemId}/answer?type=${type}`);
   },
 
-  checkQuestionAnswer(itemId: number, answer: string) {
-    return http.post(`api/question/${itemId}?answer=${answer}`);
+  checkAnswer(itemId: number, type: string, input: string) {
+    return http.post(`api/item/${itemId}?type=${type}&input=${input}`);
+  },
+
+  checkQuestionAnswer(itemId: number, type: string, input: string) {
+    return http.post(`api/question/${itemId}?type=${type}&input=${input}`);
   },
 
   appealAnswer(itemId: number, answer: string) {

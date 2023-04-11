@@ -4,12 +4,14 @@ import com.google.gson.Gson;
 import huhtala.bryce.jpgpt.dao.LanguageDataDao;
 import huhtala.bryce.jpgpt.model.*;
 import huhtala.bryce.jpgpt.service.ChatGptService;
+import huhtala.bryce.jpgpt.service.PromptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Random;
 
 
+@CrossOrigin
 @RestController
 @RequestMapping("/api/")
 public class LanguageDataController {
@@ -30,31 +32,29 @@ public class LanguageDataController {
 //        return languageDataDao.getSetById(id);
 //    }
 
-    @CrossOrigin(origins = "*")
     @PostMapping("/kanji/{id}")
     public QuizEvaluation judgeItemAnswerById(@PathVariable("id") int id, @RequestParam String answer, @RequestParam(required = false) boolean appeal) {
 
-        Kanji kanji = languageDataDao.getKanjiById(id);
+//        Item item = languageDataDao.getKanjiById(id);
 
         if (!appeal) {
-            String[] correctAnswers = kanji.getMeanings().split("\\|");
+//            String[] correctAnswers = item.getMeanings().split("\\|");
 
-            for (String correctAnswer : correctAnswers) {
-                if (answer.equalsIgnoreCase(correctAnswer))
+//            for (String correctAnswer : correctAnswers) {
+//                if (answer.equalsIgnoreCase(correctAnswer))
                     return new QuizEvaluation("Correct");
             }
 
-            return new QuizEvaluation("Incorrect");
-        } else {
-            if (runKanjiAppeal(kanji.getKanji(), answer))
-                return new QuizEvaluation("Correct");
-            else
+//            return new QuizEvaluation("Incorrect");
+//        } else {
+//            if (runKanjiAppeal(kanji.getKanji(), answer))
+//                return new QuizEvaluation("Correct");
+//            else
                 return new QuizEvaluation("Incorrect");
-        }
+//        }
 
     }
 
-    @CrossOrigin(origins = "*")
     @PostMapping("/question/{id}")
     public QuestionEvaluation judgeQuestionAnswerById(@PathVariable("id") int id, @RequestParam String answer, @RequestParam(required = false) boolean appeal) {
 
@@ -65,32 +65,184 @@ public class LanguageDataController {
 
 
 
-    @CrossOrigin(origins = "*")
     @GetMapping("/kanji/{id}/meaning")
     public String[] judgeItemAnswerById(@PathVariable("id") int id) {
 
-        Kanji kanji = languageDataDao.getKanjiById(id);
-
-        String[] correctAnswers = kanji.getMeanings().split("\\|");
-
-        return correctAnswers;
-
+//        Kanji kanji = languageDataDao.getKanjiById(id);
+//
+//        String[] correctAnswers = kanji.getMeanings().split("\\|");
+//
+//        return correctAnswers;
+        return null;
     }
 
 
-    @CrossOrigin(origins = "*")
-    @GetMapping("/sets/{id}/random")
-    public QuizDTO getRandomItemFromSet(@PathVariable("id") int id) {
-        Kanji kanji = languageDataDao.getRandomKanji();
+    @GetMapping("/item")
+    public Quiz getChallengeItem() {
+        Item item = languageDataDao.getChallengeItem();
 
-        QuizDTO quiz = new QuizDTO();
-        quiz.setContent(kanji.getKanji());
-        quiz.setOutputContext("");
-        quiz.setOutput("What is the meaning?");
-        quiz.setTopic("Kanji");
+        Quiz quiz = new Quiz();
+
+        boolean japaneseContent = true;
+
+        quiz.setId(item.getItemId());
+        quiz.setTopic(item.getItemCategoryName());
+        Random random = new Random();
+
+        switch (item.getItemCategoryName()) {
+            case "Kanji":
+                switch(random.nextInt(3)) {
+                    case 0:
+                        quiz.setType("meaning");
+                        break;
+                    case 1:
+                        quiz.setType("kunreading");
+                        break;
+                    case 2:
+                        quiz.setType("onreading");
+                        break;
+                }
+                break;
+            case "Vocab":
+                switch(random.nextInt(2)) {
+                    case 0:
+                        quiz.setType("j2e");
+                        break;
+                    case 1:
+                        quiz.setType("e2j");
+                        japaneseContent = false;
+                        break;
+                }
+                break;
+            case "Conversation":
+                switch(random.nextInt(2 + (item.isQuestionCandidate() ? 1 : 0))) {
+                    case 0:
+                        quiz.setType("j2e");
+                        break;
+                    case 1:
+                        quiz.setType("e2j");
+                        japaneseContent = false;
+                        break;
+                    case 2:
+                        quiz.setType("question");
+                        break;
+                }
+                break;
+
+        }
+
+        if (japaneseContent) {
+            quiz.setContent(item.getText());
+            if (item.getText().equals("NULL") || item.getText().equals("")) {
+                quiz.setContent(item.getHiragana());
+            } else {
+                if (quiz.getType().equalsIgnoreCase("j2e") || quiz.getType().equalsIgnoreCase("question"))
+                    quiz.setAltContent(item.getHiragana());
+            }
+        } else {
+            String[] meanings = item.getMeaning().split("\\|");
+            quiz.setContent(meanings[0]);
+        }
+
 
         return quiz;
     }
+
+
+    @PostMapping("/item/{id}")
+    public boolean checkSubmission(@PathVariable("id") int id, @RequestParam String input, @RequestParam String type ) {
+
+        Item item = languageDataDao.getItemById(id);
+
+        switch (type) {
+            case "j2e":
+            case "meaning":
+                String[] meanings = item.getMeaning().split("\\|");
+                for (String meaning : meanings) {
+                    if (input.equalsIgnoreCase(meaning))
+                        return true;
+                }
+                return PromptService.checkMeaning(chatGptService, item.getText(), input);
+            case "e2j":
+                if (item.getText().equalsIgnoreCase(input)) return true;
+                if (item.getHiragana().equalsIgnoreCase(input)) return true;
+
+                return PromptService.checkJapaneseTranslation(chatGptService, item.getText(), input);
+            case "kunreading": {
+                String[] readingTypes = item.getHiragana().split("\\;");
+                String[] onReadings = readingTypes[0].split("\\|");
+
+                for (String onReading : onReadings) {
+                    if (input
+                            .replace(".", "")
+                            .replace("-", "")
+                            .equalsIgnoreCase(onReading))
+                        return true;
+                }
+            }
+            case "onreading": {
+                String[] readingTypes = item.getHiragana().split("\\;");
+                String[] kunReadings = readingTypes[1].split("\\|");
+
+                for (String kunReading : kunReadings) {
+                    if (input
+                            .replace(".", "")
+                            .replace("-", "")
+                            .equalsIgnoreCase(kunReading))
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    @GetMapping("/item/{id}/hiragana")
+    public String[] getAnswer(@PathVariable("id") int id, @RequestParam String type ) {
+
+        Item item = languageDataDao.getItemById(id);
+
+        if (type.equalsIgnoreCase("j2e") || type.equalsIgnoreCase("question")) {
+            return item.getHiragana().split("\\;");
+        } else return new String[]{""};
+    }
+
+    @GetMapping("/item/{id}/answer")
+    public String[] getHiragana(@PathVariable("id") int id, @RequestParam String type ) {
+
+        Item item = languageDataDao.getItemById(id);
+
+        switch (type) {
+            case "j2e":
+            case "meaning":
+                return item.getMeaning().split("\\|");
+            case "e2j":
+                return new String[]{item.getHiragana()};
+            case "kunreading": {
+                String[] readingTypes = item.getHiragana().split("\\;");
+                String[] kunreadings = readingTypes[0].split("\\|");
+                for (String kunreading : kunreadings) {
+                    kunreading = kunreading
+                            .replace(".", "")
+                            .replace("-", "");
+                }
+                return kunreadings;
+            }
+            case "onreading": {
+                String[] readingTypes = item.getHiragana().split("\\;");
+                String[] onreadings = readingTypes[1].split("\\|");
+                for (String onreading : onreadings) {
+                    onreading = onreading
+                            .replace(".", "")
+                            .replace("-", "");
+                }
+                return onreadings;
+            }
+        }
+        return new String[]{""};
+    }
+
 
 
     private boolean runKanjiAppeal(String kanji, String answer) {
@@ -106,9 +258,9 @@ public class LanguageDataController {
 
         System.out.println("kanji " + kanji);
         System.out.println("answer " + answer);
-        System.out.println("isInputCorrectAnswer " + evaluation.isUserInputCorrectMeaning());
-        System.out.println("isInputCorrectButMispelled " + evaluation.isInputCorrectMeaningButMisspelled());
-        return evaluation.isUserInputCorrectMeaning();
+//        System.out.println("isInputCorrectAnswer " + evaluation.isUserInputCorrectMeaning());
+//        System.out.println("isInputCorrectButMispelled " + evaluation.isInputCorrectMeaningButMisspelled());
+        return evaluation.isDoesOutputConveyCorrectMeaning();
     }
 
     @CrossOrigin(origins = "*")

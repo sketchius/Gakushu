@@ -1,13 +1,13 @@
 package huhtala.bryce.jpgpt.dao;
 
+import huhtala.bryce.jpgpt.model.Item;
 import huhtala.bryce.jpgpt.model.Kanji;
 import huhtala.bryce.jpgpt.model.Question;
-import huhtala.bryce.jpgpt.model.Set;
 
 public interface LanguageDataDao {
 
     public Question getQuestionById(int id);
     public Question getRandomQuestion();
-    public Kanji getRandomKanji();
-    public Kanji getKanjiById(int id);
+    public Item getChallengeItem();
+    public Item getItemById(int id);
 }
